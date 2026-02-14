@@ -1,0 +1,164 @@
+DB - zenclass
+
+1. users
+
+CREATE TABLE users (
+    userId INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    phone VARCHAR(15),
+    batch VARCHAR(50),
+    joinedDate DATE
+);
+
+2. mentors
+
+CREATE TABLE mentors (
+    mentorId INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL
+);
+
+3. mentorMenteeMapping
+
+CREATE TABLE mentorMenteeMapping (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    mentorId INT,
+    userId INT,
+    FOREIGN KEY (mentorId) REFERENCES mentors(mentorId),
+    FOREIGN KEY (userId) REFERENCES users(userId)
+);
+
+ 4. topics
+
+CREATE TABLE topics (
+    topicId INT PRIMARY KEY AUTO_INCREMENT,
+    topicName VARCHAR(200),
+    topicDate DATE
+);
+
+5. tasks
+
+CREATE TABLE tasks (
+    taskId INT PRIMARY KEY AUTO_INCREMENT,
+    topicId INT,
+    taskName VARCHAR(200),
+    taskDate DATE,
+    FOREIGN KEY (topicId) REFERENCES topics(topicId)
+);
+
+6. attendance
+
+CREATE TABLE attendance (
+    attendanceId INT PRIMARY KEY AUTO_INCREMENT,
+    userId INT,
+    topicId INT,
+    status ENUM('Present', 'Absent'),
+    date DATE,
+    FOREIGN KEY (userId) REFERENCES users(userId),
+    FOREIGN KEY (topicId) REFERENCES topics(topicId)
+);
+
+7. taskSubmissions
+
+CREATE TABLE taskSubmissions (
+    submissionId INT PRIMARY KEY AUTO_INCREMENT,
+    userId INT,
+    taskId INT,
+    submitted BOOLEAN,
+    submissionDate DATE,
+    FOREIGN KEY (userId) REFERENCES users(userId),
+    FOREIGN KEY (taskId) REFERENCES tasks(taskId)
+);
+
+
+8. codekata
+
+CREATE TABLE codekata (
+    codekataId INT PRIMARY KEY AUTO_INCREMENT,
+    userId INT,
+    problemName VARCHAR(200),
+    solved BOOLEAN,
+    solvedDate DATE,
+    FOREIGN KEY (userId) REFERENCES users(userId)
+);
+
+
+9. companyDrives
+
+CREATE TABLE companyDrives (
+    driveId INT PRIMARY KEY AUTO_INCREMENT,
+    companyName VARCHAR(200),
+    driveDate DATE
+);
+
+
+10. driveParticipants
+
+CREATE TABLE driveParticipants (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    driveId INT,
+    userId INT,
+    appeared BOOLEAN,
+    selected BOOLEAN,
+    FOREIGN KEY (driveId) REFERENCES companyDrives(driveId),
+    FOREIGN KEY (userId) REFERENCES users(userId)
+);
+
+--------------------------------------------------------------------------------------
+
+Queries:
+---------
+
+
+1. To find all topics and tasks taught in October
+SELECT t.topicName, t.topicDate, ts.taskName
+FROM topics t
+LEFT JOIN tasks ts ON t.topicId = ts.topicId
+WHERE MONTH(t.topicDate) = 10;
+
+--------------------------------------------------------------------------------------
+
+2. To find the company drives between 15-Oct-2020 and 31-Oct-2020
+SELECT *
+FROM companyDrives
+WHERE driveDate BETWEEN '2020-10-15' AND '2020-10-31';
+
+--------------------------------------------------------------------------------------
+
+3. To find the company drives and students who appeared for placement
+SELECT cd.companyName, u.name
+FROM companyDrives cd
+JOIN driveParticipants dp ON cd.driveId = dp.driveId
+JOIN users u ON dp.userId = u.userId
+WHERE dp.appeared = TRUE;
+
+--------------------------------------------------------------------------------------
+
+4. To find the number of problems solved by each user in CodeKata
+SELECT u.name, COUNT(c.codekataId) AS problemsSolved
+FROM users u
+JOIN codekata c ON u.userId = c.userId
+WHERE c.solved = TRUE
+GROUP BY u.userId;
+
+--------------------------------------------------------------------------------------
+
+5. To find the mentors who have more than 15 mentees
+SELECT m.name, COUNT(mm.userId) AS menteeCount
+FROM mentors m
+JOIN mentorMenteeMapping mm ON m.mentorId = mm.mentorId
+GROUP BY m.mentorId
+HAVING COUNT(mm.userId) > 15;
+
+--------------------------------------------------------------------------------------
+
+6.To find the number of users absent AND task not submitted between 15-Oct-2020 and 31-Oct-2020
+SELECT COUNT(DISTINCT a.userId) AS totalUsers
+FROM attendance a
+JOIN taskSubmissions ts ON a.userId = ts.userId
+WHERE a.status = 'Absent'
+AND ts.submitted = FALSE
+AND a.date BETWEEN '2020-10-15' AND '2020-10-31';
+
+--------------------------------------------------------------------------------------
